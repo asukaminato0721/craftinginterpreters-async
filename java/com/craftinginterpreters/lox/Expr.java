@@ -6,6 +6,7 @@ import java.util.List;
 abstract class Expr {
   interface Visitor<R> {
     R visitAssignExpr(Assign expr);
+    R visitAwaitExpr(Await expr);
     R visitBinaryExpr(Binary expr);
     R visitCallExpr(Call expr);
     R visitGetExpr(Get expr);
@@ -212,6 +213,21 @@ abstract class Expr {
     final Token name;
   }
 //< expr-variable
+
+  static class Await extends Expr {
+    Await(Token keyword, Expr expression) {
+      this.keyword = keyword;
+      this.expression = expression;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitAwaitExpr(this);
+    }
+
+    final Token keyword;
+    final Expr expression;
+  }
 
   abstract <R> R accept(Visitor<R> visitor);
 }

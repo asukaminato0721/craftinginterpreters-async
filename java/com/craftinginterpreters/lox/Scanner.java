@@ -30,6 +30,8 @@ class Scanner {
     keywords.put("true",   TRUE);
     keywords.put("var",    VAR);
     keywords.put("while",  WHILE);
+    keywords.put("async",  ASYNC);
+    keywords.put("await",  AWAIT);
   }
 //< keyword-map
   private final String source;

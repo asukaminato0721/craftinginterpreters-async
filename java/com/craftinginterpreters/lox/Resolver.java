@@ -13,6 +13,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 //< scopes-field
 //> function-type-field
   private FunctionType currentFunction = FunctionType.NONE;
+  private boolean inAsyncFunction = false;
 //< function-type-field
 
   Resolver(Interpreter interpreter) {
@@ -114,7 +115,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       }
 
 //< resolver-initializer-type
-      resolveFunction(method, declaration); // [local]
+      resolveFunction(method, declaration, method.isAsync); // [local]
     }
 
 //> resolver-end-this-scope
@@ -149,7 +150,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     resolveFunction(stmt);
 */
 //> pass-function-type
-    resolveFunction(stmt, FunctionType.FUNCTION);
+    resolveFunction(stmt, FunctionType.FUNCTION, stmt.isAsync);
 //< pass-function-type
     return null;
   }
@@ -345,9 +346,11 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 */
 //> set-current-function
   private void resolveFunction(
-      Stmt.Function function, FunctionType type) {
+      Stmt.Function function, FunctionType type, boolean isAsync) {
     FunctionType enclosingFunction = currentFunction;
+    boolean enclosingAsync = inAsyncFunction;
     currentFunction = type;
+    inAsyncFunction = isAsync;
 
 //< set-current-function
     beginScope();
@@ -359,6 +362,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     endScope();
 //> restore-current-function
     currentFunction = enclosingFunction;
+    inAsyncFunction = enclosingAsync;
 //< restore-current-function
   }
 //< resolve-function
@@ -403,4 +407,16 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
   }
 //< resolve-local
+//> visit-await-expr
+  @Override
+  public Void visitAwaitExpr(Expr.Await expr) {
+    resolve(expr.expression);
+
+    if (!inAsyncFunction) {
+      Lox.error(expr.keyword, "Cannot use 'await' outside of an async function.");
+    }
+
+    return null;
+  }
+//< visit-await-expr
 }

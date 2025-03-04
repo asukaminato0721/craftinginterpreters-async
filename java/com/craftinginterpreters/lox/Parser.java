@@ -252,7 +252,13 @@ class Parser {
 //> Functions parse-function
   private Stmt.Function function(String kind) {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
-//> parse-parameters
+    boolean isAsync = false;
+
+    // Check if the function has the 'async' modifier before it
+    if (match(ASYNC)) {
+      isAsync = true;
+    }
+
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
     List<Token> parameters = new ArrayList<>();
     if (!check(RIGHT_PAREN)) {
@@ -261,18 +267,13 @@ class Parser {
           error(peek(), "Can't have more than 255 parameters.");
         }
 
-        parameters.add(
-            consume(IDENTIFIER, "Expect parameter name."));
+        parameters.add(consume(IDENTIFIER, "Expect parameter name."));
       } while (match(COMMA));
     }
     consume(RIGHT_PAREN, "Expect ')' after parameters.");
-//< parse-parameters
-//> parse-body
-
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, parameters, body);
-//< parse-body
+    return new Stmt.Function(name, parameters, body, isAsync);
   }
 //< Functions parse-function
 //> Statements and State block
@@ -402,12 +403,13 @@ class Parser {
       return new Expr.Unary(operator, right);
     }
 
-/* Parsing Expressions unary < Functions unary-call
-    return primary();
-*/
-//> Functions unary-call
+    if (match(AWAIT)) {
+      Token keyword = previous();
+      Expr right = unary();
+      return new Expr.Await(keyword, right);
+    }
+
     return call();
-//< Functions unary-call
   }
 //< unary
 //> Functions finish-call

@@ -209,6 +209,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
     return expr.name.lexeme;
   }
 //< Statements and State omit
+
+  @Override
+  public String visitAwaitExpr(Expr.Await expr) {
+    return parenthesize("await", expr.expression);
+  }
 //< visit-methods
 //> print-utilities
   private String parenthesize(String name, Expr... exprs) {

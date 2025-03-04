@@ -1,0 +1,11 @@
+// Example async function
+async fun fetchData() {
+  // Simulating async work
+  return "data";
+}
+
+// Using await
+async fun main() {
+  var result = await fetchData();
+  print result;
+}

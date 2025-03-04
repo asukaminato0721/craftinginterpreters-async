@@ -5,87 +5,74 @@ import java.util.List;
 
 class LoxFunction implements LoxCallable {
   private final Stmt.Function declaration;
-//> closure-field
   private final Environment closure;
-  
-//< closure-field
-/* Functions lox-function < Functions closure-constructor
-  LoxFunction(Stmt.Function declaration) {
-*/
-/* Functions closure-constructor < Classes is-initializer-field
-  LoxFunction(Stmt.Function declaration, Environment closure) {
-*/
-//> Classes is-initializer-field
   private final boolean isInitializer;
+  private final boolean isAsync;
 
   LoxFunction(Stmt.Function declaration, Environment closure,
-              boolean isInitializer) {
+              boolean isInitializer, boolean isAsync) {
     this.isInitializer = isInitializer;
-//< Classes is-initializer-field
-//> closure-constructor
     this.closure = closure;
-//< closure-constructor
     this.declaration = declaration;
+    this.isAsync = isAsync;
   }
-//> Classes bind-instance
+
   LoxFunction bind(LoxInstance instance) {
     Environment environment = new Environment(closure);
     environment.define("this", instance);
-/* Classes bind-instance < Classes lox-function-bind-with-initializer
-    return new LoxFunction(declaration, environment);
-*/
-//> lox-function-bind-with-initializer
     return new LoxFunction(declaration, environment,
-                           isInitializer);
-//< lox-function-bind-with-initializer
+                           isInitializer, isAsync);
   }
-//< Classes bind-instance
-//> function-to-string
+
   @Override
   public String toString() {
     return "<fn " + declaration.name.lexeme + ">";
   }
-//< function-to-string
-//> function-arity
+
   @Override
   public int arity() {
     return declaration.params.size();
   }
-//< function-arity
-//> function-call
+
   @Override
   public Object call(Interpreter interpreter,
                      List<Object> arguments) {
-/* Functions function-call < Functions call-closure
-    Environment environment = new Environment(interpreter.globals);
-*/
-//> call-closure
     Environment environment = new Environment(closure);
-//< call-closure
     for (int i = 0; i < declaration.params.size(); i++) {
       environment.define(declaration.params.get(i).lexeme,
           arguments.get(i));
     }
 
-/* Functions function-call < Functions catch-return
-    interpreter.executeBlock(declaration.body, environment);
-*/
-//> catch-return
+    if (isAsync) {
+      LoxPromise promise = new LoxPromise();
+      // Execute asynchronously
+      new Thread(() -> {
+        try {
+          Object result = executeBody(interpreter, environment);
+          promise.resolve(result);
+        } catch (RuntimeError error) {
+          promise.reject(error);
+        }
+      }).start();
+      return promise;
+    }
+
+    return executeBody(interpreter, environment);
+  }
+
+  private Object executeBody(Interpreter interpreter, Environment environment) {
     try {
       interpreter.executeBlock(declaration.body, environment);
     } catch (Return returnValue) {
-//> Classes early-return-this
       if (isInitializer) return closure.getAt(0, "this");
-
-//< Classes early-return-this
       return returnValue.value;
     }
-//< catch-return
-//> Classes return-this
 
     if (isInitializer) return closure.getAt(0, "this");
-//< Classes return-this
     return null;
   }
-//< function-call
+
+  public boolean isAsync() {
+    return isAsync;
+  }
 }

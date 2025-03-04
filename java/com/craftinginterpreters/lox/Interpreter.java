@@ -136,12 +136,9 @@ class Interpreter implements Expr.Visitor<Object>,
 
     Map<String, LoxFunction> methods = new HashMap<>();
     for (Stmt.Function method : stmt.methods) {
-/* Classes interpret-methods < Classes interpreter-method-initializer
-      LoxFunction function = new LoxFunction(method, environment);
-*/
 //> interpreter-method-initializer
       LoxFunction function = new LoxFunction(method, environment,
-          method.name.lexeme.equals("init"));
+          method.name.lexeme.equals("init"), method.isAsync);
 //< interpreter-method-initializer
       methods.put(method.name.lexeme, function);
     }
@@ -186,7 +183,7 @@ class Interpreter implements Expr.Visitor<Object>,
 */
 //> Classes construct-function
     LoxFunction function = new LoxFunction(stmt, environment,
-                                           false);
+                                           false, stmt.isAsync);
 //< Classes construct-function
     environment.define(stmt.name.lexeme, function);
     return null;
@@ -339,26 +336,38 @@ class Interpreter implements Expr.Visitor<Object>,
     Object callee = evaluate(expr.callee);
 
     List<Object> arguments = new ArrayList<>();
-    for (Expr argument : expr.arguments) { // [in-order]
-      arguments.add(evaluate(argument));
+    for (Expr argument : expr.arguments) {
+      Object value = evaluate(argument);
+      // If any argument is a Promise, await it
+      if (value instanceof LoxPromise) {
+        LoxPromise promise = (LoxPromise)value;
+        while (!promise.isResolved() && !promise.isRejected()) {
+          try {
+            Thread.sleep(1);
+          } catch (InterruptedException e) {
+            throw new RuntimeError(expr.paren, "Async operation interrupted.");
+          }
+        }
+        if (promise.isRejected()) {
+          throw promise.getError();
+        }
+        value = promise.getValue();
+      }
+      arguments.add(value);
     }
 
-//> check-is-callable
     if (!(callee instanceof LoxCallable)) {
       throw new RuntimeError(expr.paren,
           "Can only call functions and classes.");
     }
 
-//< check-is-callable
     LoxCallable function = (LoxCallable)callee;
-//> check-arity
     if (arguments.size() != function.arity()) {
       throw new RuntimeError(expr.paren, "Expected " +
           function.arity() + " arguments but got " +
           arguments.size() + ".");
     }
 
-//< check-arity
     return function.call(this, arguments);
   }
 //< Functions visit-call
@@ -533,4 +542,26 @@ class Interpreter implements Expr.Visitor<Object>,
     return object.toString();
   }
 //< stringify
+
+  @Override
+  public Object visitAwaitExpr(Expr.Await expr) {
+    Object value = evaluate(expr.expression);
+    if (!(value instanceof LoxPromise)) {
+      throw new RuntimeError(expr.keyword, 
+          "Can only await a Promise.");
+    }
+    LoxPromise promise = (LoxPromise)value;
+    while (!promise.isResolved() && !promise.isRejected()) {
+      try {
+        Thread.sleep(1); // Simple polling
+      } catch (InterruptedException e) {
+        throw new RuntimeError(expr.keyword, 
+            "Async operation interrupted.");
+      }
+    }
+    if (promise.isRejected()) {
+      throw promise.getError();
+    }
+    return promise.getValue();
+  }
 }
