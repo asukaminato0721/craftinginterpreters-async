@@ -416,6 +416,11 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       Lox.error(expr.keyword, "Cannot use 'await' outside of an async function.");
     }
 
+    // Check that we're not awaiting a non-Promise value
+    if (expr.expression instanceof Expr.Literal) {
+      Lox.error(expr.keyword, "Cannot await a literal value.");
+    }
+
     return null;
   }
 //< visit-await-expr

@@ -262,72 +262,45 @@ class Interpreter implements Expr.Visitor<Object>,
   @Override
   public Object visitBinaryExpr(Expr.Binary expr) {
     Object left = evaluate(expr.left);
-    Object right = evaluate(expr.right); // [left]
+    Object right = evaluate(expr.right);
 
     switch (expr.operator.type) {
-//> binary-equality
       case BANG_EQUAL: return !isEqual(left, right);
       case EQUAL_EQUAL: return isEqual(left, right);
-//< binary-equality
-//> binary-comparison
       case GREATER:
-//> check-greater-operand
         checkNumberOperands(expr.operator, left, right);
-//< check-greater-operand
         return (double)left > (double)right;
       case GREATER_EQUAL:
-//> check-greater-equal-operand
         checkNumberOperands(expr.operator, left, right);
-//< check-greater-equal-operand
         return (double)left >= (double)right;
       case LESS:
-//> check-less-operand
         checkNumberOperands(expr.operator, left, right);
-//< check-less-operand
         return (double)left < (double)right;
       case LESS_EQUAL:
-//> check-less-equal-operand
         checkNumberOperands(expr.operator, left, right);
-//< check-less-equal-operand
         return (double)left <= (double)right;
-//< binary-comparison
       case MINUS:
-//> check-minus-operand
         checkNumberOperands(expr.operator, left, right);
-//< check-minus-operand
         return (double)left - (double)right;
-//> binary-plus
       case PLUS:
         if (left instanceof Double && right instanceof Double) {
           return (double)left + (double)right;
-        } // [plus]
-
+        }
         if (left instanceof String && right instanceof String) {
           return (String)left + (String)right;
         }
-
-/* Evaluating Expressions binary-plus < Evaluating Expressions string-wrong-type
-        break;
-*/
-//> string-wrong-type
         throw new RuntimeError(expr.operator,
             "Operands must be two numbers or two strings.");
-//< string-wrong-type
-//< binary-plus
       case SLASH:
-//> check-slash-operand
         checkNumberOperands(expr.operator, left, right);
-//< check-slash-operand
         return (double)left / (double)right;
       case STAR:
-//> check-star-operand
         checkNumberOperands(expr.operator, left, right);
-//< check-star-operand
         return (double)left * (double)right;
+      default:
+        // Unreachable - only binary operators will call this method
+        throw new RuntimeError(expr.operator, "Invalid binary operator.");
     }
-
-    // Unreachable.
-    return null;
   }
 //< visit-binary
 //> Functions visit-call
@@ -462,19 +435,14 @@ class Interpreter implements Expr.Visitor<Object>,
     Object right = evaluate(expr.right);
 
     switch (expr.operator.type) {
-//> unary-bang
       case BANG:
         return !isTruthy(right);
-//< unary-bang
       case MINUS:
-//> check-unary-operand
         checkNumberOperand(expr.operator, right);
-//< check-unary-operand
         return -(double)right;
+      default:
+        throw new RuntimeError(expr.operator, "Invalid unary operator.");
     }
-
-    // Unreachable.
-    return null;
   }
 //< visit-unary
 //> Statements and State visit-variable
@@ -546,22 +514,24 @@ class Interpreter implements Expr.Visitor<Object>,
   @Override
   public Object visitAwaitExpr(Expr.Await expr) {
     Object value = evaluate(expr.expression);
+    
     if (!(value instanceof LoxPromise)) {
-      throw new RuntimeError(expr.keyword, 
-          "Can only await a Promise.");
+      throw new RuntimeError(expr.keyword, "Can only await a Promise value.");
     }
+
     LoxPromise promise = (LoxPromise)value;
     while (!promise.isResolved() && !promise.isRejected()) {
       try {
-        Thread.sleep(1); // Simple polling
+        Thread.sleep(1); // Simple polling implementation
       } catch (InterruptedException e) {
-        throw new RuntimeError(expr.keyword, 
-            "Async operation interrupted.");
+        throw new RuntimeError(expr.keyword, "Async operation interrupted.");
       }
     }
+
     if (promise.isRejected()) {
       throw promise.getError();
     }
+
     return promise.getValue();
   }
 }

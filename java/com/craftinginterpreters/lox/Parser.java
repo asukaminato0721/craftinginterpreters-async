@@ -63,7 +63,12 @@ class Parser {
       if (match(CLASS)) return classDeclaration();
 //< Classes match-class
 //> Functions match-fun
-      if (match(FUN)) return function("function");
+      if (match(ASYNC)) {
+        if (match(FUN)) return function("function", true);
+        error(peek(), "Expected 'fun' after 'async'.");
+        return null;
+      }
+      if (match(FUN)) return function("function", false);
 //< Functions match-fun
       if (match(VAR)) return varDeclaration();
 
@@ -90,7 +95,12 @@ class Parser {
 
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      methods.add(function("method"));
+      boolean isAsync = match(ASYNC);
+      if (isAsync && !check(IDENTIFIER)) {
+        error(peek(), "Expected method name after 'async'.");
+        break;
+      }
+      methods.add(function("method", isAsync));
     }
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");
@@ -250,15 +260,8 @@ class Parser {
   }
 //< Statements and State parse-expression-statement
 //> Functions parse-function
-  private Stmt.Function function(String kind) {
+  private Stmt.Function function(String kind, boolean isAsync) {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
-    boolean isAsync = false;
-
-    // Check if the function has the 'async' modifier before it
-    if (match(ASYNC)) {
-      isAsync = true;
-    }
-
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
     List<Token> parameters = new ArrayList<>();
     if (!check(RIGHT_PAREN)) {
@@ -403,10 +406,11 @@ class Parser {
       return new Expr.Unary(operator, right);
     }
 
+    // Handle await expressions
     if (match(AWAIT)) {
       Token keyword = previous();
-      Expr right = unary();
-      return new Expr.Await(keyword, right);
+      Expr expression = primary();
+      return new Expr.Await(keyword, expression);
     }
 
     return call();
@@ -560,7 +564,42 @@ class Parser {
         case WHILE:
         case PRINT:
         case RETURN:
+        case ASYNC:
           return;
+        
+        case AWAIT:
+        case AND:
+        case BANG:
+        case BANG_EQUAL:
+        case COMMA:
+        case DOT:
+        case ELSE:
+        case EOF:
+        case EQUAL:
+        case EQUAL_EQUAL:
+        case FALSE:
+        case GREATER:
+        case GREATER_EQUAL:
+        case IDENTIFIER:
+        case LEFT_BRACE:
+        case LEFT_PAREN:
+        case LESS:
+        case LESS_EQUAL:
+        case MINUS:
+        case NIL:
+        case NUMBER:
+        case OR:
+        case PLUS:
+        case RIGHT_BRACE:
+        case RIGHT_PAREN:
+        case SEMICOLON:
+        case SLASH:
+        case STAR:
+        case STRING:
+        case SUPER:
+        case THIS:
+        case TRUE:
+          break;
       }
 
       advance();

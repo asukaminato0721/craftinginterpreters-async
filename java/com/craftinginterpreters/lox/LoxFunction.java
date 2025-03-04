@@ -46,14 +46,22 @@ class LoxFunction implements LoxCallable {
     if (isAsync) {
       LoxPromise promise = new LoxPromise();
       // Execute asynchronously
-      new Thread(() -> {
+      Thread asyncThread = new Thread(() -> {
         try {
           Object result = executeBody(interpreter, environment);
           promise.resolve(result);
         } catch (RuntimeError error) {
           promise.reject(error);
+        } catch (Exception e) {
+          promise.reject(new RuntimeError(declaration.name, 
+              "Async function threw an unexpected error: " + e.getMessage()));
         }
-      }).start();
+      });
+      asyncThread.setUncaughtExceptionHandler((thread, ex) -> {
+        promise.reject(new RuntimeError(declaration.name,
+            "Uncaught error in async function: " + ex.getMessage()));
+      });
+      asyncThread.start();
       return promise;
     }
 

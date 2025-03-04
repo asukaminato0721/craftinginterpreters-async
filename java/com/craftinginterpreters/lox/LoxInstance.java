@@ -26,7 +26,12 @@ class LoxInstance {
     if (method != null) return method;
 */
 //> lox-instance-bind-method
-    if (method != null) return method.bind(this);
+    if (method != null) {
+      LoxFunction boundMethod = method.bind(this);
+      // Cache the bound method as a field to avoid rebinding every time
+      fields.put(name.lexeme, boundMethod);
+      return boundMethod;
+    }
 //< lox-instance-bind-method
 
 //< lox-instance-get-method
