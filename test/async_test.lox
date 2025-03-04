@@ -11,16 +11,16 @@ async fun delay(ms) {
 // Test async function call
 async fun test1() {
   print "Starting test1...";
-  var result = await delay(1);
+  var result = await delay(10);
   print "After delay: " + result;
 }
 
 // Test multiple awaits
 async fun test2() {
   print "Starting test2...";
-  var result1 = await delay(0.5);
+  var result1 = await delay(5);
   print "First delay: " + result1;
-  var result2 = await delay(0.5);
+  var result2 = await delay(5);
   print "Second delay: " + result2;
 }
 
@@ -32,11 +32,9 @@ async fun throwError() {
 
 async fun test3() {
   print "Starting test3...";
-  try {
-    await throwError();
-  } catch {
-    print "Caught error as expected";
-  }
+  // Lox doesn't have try/catch yet, so we'll just let it throw
+  var result = await throwError();
+  print "This won't be reached";
 }
 
 // Test async method in class
@@ -60,6 +58,6 @@ print "test2 called";
 test3();
 print "test3 called";
 
-var obj = AsyncTest();
-obj.method();
+var instance = AsyncTest();
+instance.method();
 print "method called";

@@ -409,7 +409,7 @@ class Parser {
     // Handle await expressions
     if (match(AWAIT)) {
       Token keyword = previous();
-      Expr expression = primary();
+      Expr expression = call(); // Use call() instead of primary() to handle function calls
       return new Expr.Await(keyword, expression);
     }
 
