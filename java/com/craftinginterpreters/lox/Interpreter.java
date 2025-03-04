@@ -49,6 +49,20 @@ class Interpreter implements Expr.Visitor<Object>,
       @Override
       public String toString() { return "<native fn>"; }
     });
+
+    globals.define("str", new LoxCallable() {
+      @Override
+      public int arity() { return 1; }
+
+      @Override
+      public Object call(Interpreter interpreter,
+                         List<Object> arguments) {
+        return stringify(arguments.get(0));
+      }
+
+      @Override
+      public String toString() { return "<native fn>"; }
+    });
   }
   
 //< Functions interpreter-constructor
@@ -307,16 +321,19 @@ class Interpreter implements Expr.Visitor<Object>,
   @Override
   public Object visitCallExpr(Expr.Call expr) {
     Object callee = evaluate(expr.callee);
+    System.out.println("[DEBUG] Calling function: " + callee);
 
     List<Object> arguments = new ArrayList<>();
     for (Expr argument : expr.arguments) {
       Object value = evaluate(argument);
+      System.out.println("[DEBUG] Argument value: " + value);
       // If any argument is a Promise, await it
       if (value instanceof LoxPromise) {
         LoxPromise promise = (LoxPromise)value;
+        System.out.println("[DEBUG] Awaiting argument promise...");
         while (!promise.isResolved() && !promise.isRejected()) {
           try {
-            Thread.sleep(1);
+            Thread.sleep(10); // Increased polling interval
           } catch (InterruptedException e) {
             throw new RuntimeError(expr.paren, "Async operation interrupted.");
           }
@@ -325,6 +342,7 @@ class Interpreter implements Expr.Visitor<Object>,
           throw promise.getError();
         }
         value = promise.getValue();
+        System.out.println("[DEBUG] Promise resolved to: " + value);
       }
       arguments.add(value);
     }
@@ -341,7 +359,9 @@ class Interpreter implements Expr.Visitor<Object>,
           arguments.size() + ".");
     }
 
-    return function.call(this, arguments);
+    Object result = function.call(this, arguments);
+    System.out.println("[DEBUG] Function call result: " + result);
+    return result;
   }
 //< Functions visit-call
 //> Classes interpreter-visit-get
@@ -520,12 +540,10 @@ class Interpreter implements Expr.Visitor<Object>,
     }
 
     LoxPromise promise = (LoxPromise)value;
-    while (!promise.isResolved() && !promise.isRejected()) {
-      try {
-        Thread.sleep(1); // Simple polling implementation
-      } catch (InterruptedException e) {
-        throw new RuntimeError(expr.keyword, "Async operation interrupted.");
-      }
+    try {
+      promise.await(); // Will block until resolved or rejected
+    } catch (InterruptedException e) {
+      throw new RuntimeError(expr.keyword, "Async operation interrupted.");
     }
 
     if (promise.isRejected()) {

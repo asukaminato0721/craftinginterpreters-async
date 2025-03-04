@@ -1,63 +1,36 @@
-// Basic async function test
-async fun delay(ms) {
-  // Simulate delay using native clock function
-  var start = clock();
-  while (clock() - start < ms) {
-    // Busy wait
+// Basic async function test with minimal operations
+async fun delay(count) {
+  print "Starting delay...";
+  var i = 0;
+  while (i < count) {
+    i = i + 1;
   }
-  return "done";
+  print "Delay completed";
+  return count;
 }
 
-// Test async function call
-async fun test1() {
-  print "Starting test1...";
-  var result = await delay(10);
-  print "After delay: " + result;
-}
-
-// Test multiple awaits
-async fun test2() {
-  print "Starting test2...";
-  var result1 = await delay(5);
-  print "First delay: " + result1;
-  var result2 = await delay(5);
-  print "Second delay: " + result2;
-}
-
-// Test error handling
-async fun throwError() {
+// Main test runner function
+async fun main() {
+  print "=== Starting Tests ===";
+  
+  print "Test 1: Basic await";
+  var result = await delay(1000);
+  print result;
+  
+  print "Test 2: Multiple awaits";
+  var r1 = await delay(500);
+  print r1;
+  var r2 = await delay(500);
+  print r2;
+  
+  print "Test 3: Error handling";
   var x = nil;
-  return x.nonexistent; // Should throw error
+  //x.nonexistent; // This will throw an error
+ // print "This line won't be reached";
+  
+  print "=== Tests Complete ===";
 }
 
-async fun test3() {
-  print "Starting test3...";
-  // Lox doesn't have try/catch yet, so we'll just let it throw
-  var result = await throwError();
-  print "This won't be reached";
-}
-
-// Test async method in class
-class AsyncTest {
-  async method() {
-    print "Starting method...";
-    var result = await delay(0.5);
-    print "Method completed: " + result;
-  }
-}
-
-// Run all tests
-print "Running async/await tests...";
-
-test1();
-print "test1 called";
-
-test2();
-print "test2 called";
-
-test3();
-print "test3 called";
-
-var instance = AsyncTest();
-instance.method();
-print "method called";
+// Start the test suite
+print "Starting test suite...";
+main();

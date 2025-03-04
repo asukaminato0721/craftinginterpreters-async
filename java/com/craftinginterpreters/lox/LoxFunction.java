@@ -44,20 +44,26 @@ class LoxFunction implements LoxCallable {
     }
 
     if (isAsync) {
+      System.out.println("[DEBUG] Starting async function: " + declaration.name.lexeme);
       LoxPromise promise = new LoxPromise();
       // Execute asynchronously
       Thread asyncThread = new Thread(() -> {
         try {
+          System.out.println("[DEBUG] Executing async function body: " + declaration.name.lexeme);
           Object result = executeBody(interpreter, environment);
+          System.out.println("[DEBUG] Async function completed: " + declaration.name.lexeme + " with result: " + result);
           promise.resolve(result);
         } catch (RuntimeError error) {
+          System.out.println("[DEBUG] Async function error: " + declaration.name.lexeme + " - " + error.getMessage());
           promise.reject(error);
         } catch (Exception e) {
+          System.out.println("[DEBUG] Async function unexpected error: " + declaration.name.lexeme + " - " + e.getMessage());
           promise.reject(new RuntimeError(declaration.name, 
               "Async function threw an unexpected error: " + e.getMessage()));
         }
       });
       asyncThread.setUncaughtExceptionHandler((thread, ex) -> {
+        System.out.println("[DEBUG] Async function uncaught error: " + declaration.name.lexeme + " - " + ex.getMessage());
         promise.reject(new RuntimeError(declaration.name,
             "Uncaught error in async function: " + ex.getMessage()));
       });
